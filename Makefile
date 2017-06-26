@@ -1,23 +1,23 @@
-PREFIX ?= /usr/local
-VERSION = "v0.0.1"
+PREFIX ?= /tmp/ubuntu-minimal-build
+VERSION ?= $(tag)
 
 all: install
 
 install:
-	mkdir -p $(DESTDIR)$(PREFIX)/bin
-	cp bin/ubuntu-minimal $(DESTDIR)$(PREFIX)/bin/ubuntu-minimal
-	chmod 755 $(DESTDIR)$(PREFIX)/bin/ubuntu-minimal
-	install -m 0755 make-docker-wrapper.sh $(DESTDIR)$(PREFIX)/bin/make-docker-wrapper
+	mkdir -p ./build/$(VERSION)/$(PREFIX)/bin
+	cp bin/ubuntu-minimal ./build/$(VERSION)/$(PREFIX)/bin/ubuntu-minimal
+	chmod 755 ./build/$(VERSION)/$(PREFIX)/bin/ubuntu-minimal
+	install -m 0755 make-docker-wrapper.sh ./build/$(VERSION)/$(PREFIX)/bin/make-docker-wrapper
 
 uninstall:
-	@$(RM) $(DESTDIR)$(PREFIX)/bin/ubuntu-minimal
+	@$(RM) ./build/$(VERSION)/$(PREFIX)/bin/ubuntu-minimal
 	@docker rmi hellgate75/ubuntu-minimal:$(VERSION)
 	@docker rmi hellgate75/ubuntu-minimal:latest
 
 build:
 #	@docker build -t hellgate75/ubuntu-minimal:$(VERSION) . \
 	&& docker tag -f hellgate75/ubuntu-minimal:$(VERSION) hellgate75/ubuntu-minimal:latest
-	$(DESTDIR)$(PREFIX)/bin/make-docker-wrapper $(VERSION) "tail -f /dev/null" &&
+	./build/$(VERSION)/$(PREFIX)/bin/make-docker-wrapper $(VERSION) "tail -f /dev/null" &&
 	docker tag -f hellgate75/ubuntu-minimal:$(VERSION) hellgate75/ubuntu-minimal:latest
 
 publish: build
