@@ -1,0 +1,9 @@
+#!/bin/bash
+apt-get upate && apt-get intall -y sudo vim wget curl
+sudo apt-get install -y update-manager-core
+sudo apt-get update
+sudo do-release-upgrade -y
+sudo apt-get clean && \
+sudo apt-get -y autoclean && \
+sudo rm -rf /var/lib/apt/lists/*
+lsb_release -a

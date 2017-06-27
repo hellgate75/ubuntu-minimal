@@ -1,10 +1,17 @@
 #!/bin/bash
 UBUNTU_VERSION=latest
-if ! [[ -z "$1" ]]; then
-  UBUNTU_VERSION="$1"
+PROGNAME="${basename:-$1}"
+if ! [[ -z "$2" ]]; then
+  UBUNTU_VERSION="$2"
 fi
+COMMAND="$3"
+CURRENT_PATH="$(pwd)"
+echo "Current folder : $CURRENT_PATH"
+echo "Folder : $PROGNAME"
+echo "Version : $UBUNTU_VERSION"
+echo "Command : $COMMAND"
 sudo mkdir /tmp/ubuntu-systemd
-sudo docker run -it --name docker-bootstrapdeb -d --privileged -v /tmp/ubuntu-systemd:/mnt ubuntu:$UBUNTU_VERSION tail -f /dev/null
+sudo docker run -it --name docker-bootstrapdeb -d --privileged -v /tmp/ubuntu-systemd:/mnt ubuntu:$UBUNTU_VERSION bash -c "$COMMAND"
 echo '#!/bin/bash' > ./install-minibase.sh
 echo 'cd /mnt' >> ./install-minibase.sh
 echo 'apt-get update && apt-get install -y debootstrap' >> ./install-minibase.sh
@@ -14,12 +21,19 @@ echo "cd ./rootfs && tar --numeric-owner -czf ../debootstrap-minbase-ubuntu-$UBU
 chmod +x /install-minibase.sh
 sudo docker cp install-minibase.sh docker-bootstrapdeb:/install-minibase.sh
 sudo docker exec -it docker-bootstrapdeb  bash -c "chmod +x /install-minibase.sh && /install-minibase.sh"
-sudo docker cp docker-bootstrapdeb:/mnt/debootstrap-minbase-ubuntu-$UBUNTU_VERSION.tgz ./
+mkdir -p $CURRENT_PATH/output
+rm -f $CURRENT_PATH/output/debootstrap-minbase-ubuntu-$UBUNTU_VERSION.tgz
+sudo docker cp docker-bootstrapdeb:/mnt/debootstrap-minbase-ubuntu-$UBUNTU_VERSION.tgz $CURRENT_PATH/output/
 sudo docker rm -f docker-bootstrapdeb
 sudo rm -Rf /tmp/ubuntu-systemd
 rm -f ./install-minibase.sh
-docker import --comment "Ubuntu $UBUNTU_VERSION base minimal bootstrapdeb image" ./debootstrap-minbase-ubuntu-$UBUNTU_VERSION.tgz "hellgate75/ubuntu-minimal:$UBUNTU_VERSION"
+if ! [[ -z "$(docker images | grep 'hellgate75/ubuntu-minimal' | grep "$UBUNTU_VERSION")" ]]; then
+  docker rmi -f "hellgate75/ubuntu-minimal:$UBUNTU_VERSION"
+fi
+docker import --message "Ubuntu $UBUNTU_VERSION base minimal bootstrapdeb image" $CURRENT_PATH/output/debootstrap-minbase-ubuntu-$UBUNTU_VERSION.tgz "hellgate75/ubuntu-minimal:$UBUNTU_VERSION"
 exec docker run \
-  --interactive --tty --rm \
+  --interactive --tty \
+  --name ubuntu-minimal-$UBUNTU_VERSION \
+  -d \
   --workdir / \
-  "hellgate75/ubuntu-minimal:$UBUNTU_VERSION" "$@"
+  "hellgate75/ubuntu-minimal:$UBUNTU_VERSION" bash -c "$COMMAND"
